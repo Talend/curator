@@ -1,5 +1,5 @@
 from voluptuous import *
-from ..defaults import settings
+from . import settings
 from . import filter_elements
 import logging
 logger = logging.getLogger(__name__)
@@ -48,10 +48,12 @@ def age(action, config):
         filter_elements.direction(),
         filter_elements.unit(),
         filter_elements.unit_count(),
+        filter_elements.unit_count_pattern(),
         filter_elements.epoch(),
         filter_elements.exclude(),
     ]
     retval += _age_elements(action, config)
+    logger.debug('AGE FILTER = {0}'.format(retval))
     return retval
 
 def allocated(action, config):
@@ -69,6 +71,7 @@ def count(action, config):
     retval = [
         filter_elements.count(),
         filter_elements.use_age(),
+        filter_elements.pattern(),
         filter_elements.reverse(),
         filter_elements.exclude(exclude=True),
     ]
@@ -97,12 +100,31 @@ def pattern(action, config):
         filter_elements.exclude(),
     ]
 
+def period(action, config):
+    retval = [
+        filter_elements.unit(period=True),
+        filter_elements.range_from(),
+        filter_elements.range_to(),
+        filter_elements.week_starts_on(),
+        filter_elements.epoch(),
+        filter_elements.exclude(),
+        filter_elements.intersect(),
+        filter_elements.period_type(),
+        filter_elements.date_from(),
+        filter_elements.date_from_format(),
+        filter_elements.date_to(),
+        filter_elements.date_to_format(),
+    ]
+    retval += _age_elements(action, config)
+    return retval
+
 def space(action, config):
     retval = [
         filter_elements.disk_space(),
         filter_elements.reverse(),
         filter_elements.use_age(),
         filter_elements.exclude(),
+        filter_elements.threshold_behavior(),
     ]
     retval += _age_elements(action, config)
     return retval

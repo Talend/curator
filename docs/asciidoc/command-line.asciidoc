@@ -58,8 +58,7 @@ Options:
   --help         Show this message and exit.
 -------
 
-Starting in Curator 4.1, you can use <<envvars,environment variables>> in your
-configuration files.
+You can use <<envvars,environment variables>> in your configuration files.
 
 TIP: See <<faq_unicode,this FAQ about Python 3 requiring a Unicode locale>>
 
@@ -68,12 +67,11 @@ TIP: See <<faq_unicode,this FAQ about Python 3 requiring a Unicode locale>>
 [[singleton-cli]]
 == Singleton Command Line Interface
 
-Starting in Curator 4.2, a partial restoration of the command-line from the 3.x
-version is back as the `curator_cli` command.  This allows users to run a
-single, supported action from the command-line, without needing either the
-client or action YAML configuration file, though it does support using the
-client configuration file if you want.  As an important bonus, the command-line
-options allow you to override the settings in the `curator.yml` file!
+The `curator_cli` command allows users to run a single, supported action from
+the command-line, without needing either the client or action YAML configuration
+file, though it does support using the client configuration file if you want.
+As an important bonus, the command-line options allow you to override the
+settings in the `curator.yml` file!
 
 [source,sh]
 ---------
@@ -154,9 +152,7 @@ NOTE: You may need to escape all of the double quotes on some platforms, or
 Caveats to this approach:
 
 1. Only one action can be taken at a time.
-2. You must still specify a <<filtertype_none,none>> filter if you want to act +
-  on all indices or snapshots.
-3. Not all actions have singleton analogs.  <<alias,Alias>> and +
+2. Not all actions have singleton analogs. For example, <<alias,Alias>> and +
   <<restore,Restore>> do not have singleton actions.
 
 === Show Indices/Snapshots

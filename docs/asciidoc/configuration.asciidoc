@@ -77,8 +77,8 @@ and what each configuration looks like after replacement:
 [[actionfile]]
 == Action File
 
-NOTE: Starting in Curator 4.1, you can use <<envvars,environment variables>> in
-    your configuration files.
+NOTE: You can use <<envvars,environment variables>> in your configuration
+  files.
 
 An action file has the following structure:
 
@@ -174,8 +174,8 @@ NOTE: The default location of the configuration file is `~/.curator/curator.yml`
     <<command-line,command-line>>.
 
 
-NOTE: Starting in Curator 4.1, you can use <<envvars,environment variables>> in
-    your configuration files.
+NOTE: You can use <<envvars,environment variables>> in your configuration
+  files.
 
 The configuration file contains client connection and settings for logging.  It
 looks like this:
@@ -220,6 +220,9 @@ hosts: 127.0.0.1
 -----------
 
 Or multiple values in the 3 acceptable YAML ways to render sequences, or arrays:
+
+WARNING: Curator can only work with one cluster at a time.  Including clients
+from multiple clusters in the `hosts` setting will result in errors.
 
 Flow:
 
@@ -320,10 +323,13 @@ SSL certificate used by Elasticsearch.
 
 There is no default.
 
+include::inc_filepath.asciidoc[]
+
 [[client_cert]]
 === client_cert
 
 This should be a file path to a client certificate (public key), or left empty.
+
 
 [source,sh]
 -----------
@@ -337,6 +343,8 @@ key, in which case <<client_key,client_key>> is not used. If specifying
 <<client_key,client_key>> to specify the file containing the SSL key. The file
 must be in PEM format, and the key part, if used, must be an unencrypted key in
 PEM format as well.
+
+include::inc_filepath.asciidoc[]
 
 [[client_key]]
 === client_key
@@ -353,11 +361,12 @@ Elasticsearch. If using <<client_cert,client_cert>> and the file specified does
 not also contain the key, use `client_key` to specify the file containing the
 SSL key. The key file must be an unencrypted key in PEM format.
 
+include::inc_filepath.asciidoc[]
+
 [[aws_key]]
 === aws_key
 
-WARNING: This feature allows connection to AWS using IAM credentials, but
-    <<faq_aws_iam,Curator 4 does not currently work with AWS>>.
+WARNING: This feature has not been fully tested and should be considered BETA.
 
 WARNING: This setting will not work unless the `requests-aws4auth` Python module
     has been manually installed first.
@@ -373,11 +382,13 @@ IMPORTANT: You must set your <<hosts,hosts>> to the proper hostname _with_ port.
     It may not work setting <<port,port>> and <<hosts,hosts>> to only a host
     name due to the different connection module used.
 
+IMPORTANT: This feature may be deprecated in a future release. You should consider
+    using <<aws_sign_request,aws_sign_request>> instead.
+
 [[aws_secret_key]]
 === aws_secret_key
 
-WARNING: This feature allows connection to AWS using IAM credentials, but
-    <<faq_aws_iam,Curator 4 does not currently work with AWS>>.
+WARNING: This feature has not been fully tested and should be considered BETA.
 
 WARNING: This setting will not work unless the `requests-aws4auth` Python module
     has been manually installed first.
@@ -393,11 +404,13 @@ IMPORTANT: You must set your <<hosts,hosts>> to the proper hostname _with_ port.
     It may not work setting <<port,port>> and <<hosts,hosts>> to only a host
     name due to the different connection module used.
 
+IMPORTANT: This feature may be deprecated in a future release. You should consider
+    using <<aws_sign_request,aws_sign_request>> instead.
+
 [[aws_region]]
 === aws_region
 
-WARNING: This feature allows connection to AWS using IAM credentials, but
-    <<faq_aws_iam,Curator 4 does not currently work with AWS>>.
+WARNING: This feature has not been fully tested and should be considered BETA.
 
 WARNING: This setting will not work unless the `requests-aws4auth` Python module
     has been manually installed first.
@@ -412,6 +425,39 @@ aws_region:
 IMPORTANT: You must set your <<hosts,hosts>> to the proper hostname _with_ port.
     It may not work setting <<port,port>> and <<hosts,hosts>> to only a host
     name due to the different connection module used.
+
+[[aws_sign_request]]
+=== aws_sign_request
+
+WARNING: This feature has not been fully tested and should be considered BETA.
+
+WARNING: If installing via `pip`, this setting will not work unless the `requests-aws4auth`
+    and `boto3` Python modules have been manually installed first.
+
+WARNING: Credentials found in your environment will replace the data specified in
+    <<aws_key,aws_key>> and <<aws_secret_key,aws_secret_key>>
+
+This should be `True` if you want your requests to be signed with credentials retrieved
+    from your environment. The order in which credentials will be searched for is:
+
+    . Environment variables
+    . Shared credential file (~/.aws/credentials)
+    . AWS config file (~/.aws/config)
+    . Boto2 config file (/etc/boto.cfg and ~/.boto)
+    . Instance metadata service on an Amazon EC2 instance that has an IAM role configured.
+
+The default value is `False`.
+
+[source,sh]
+-----------
+aws_sign_request: True
+-----------
+
+IMPORTANT: You must set your <<hosts,hosts>> to the proper hostname _with_ port.
+    It may not work setting <<port,port>> and <<hosts,hosts>> to only a host
+    name due to the different connection module used.
+
+
 
 [[ssl_no_validate]]
 === ssl_no_validate
@@ -504,7 +550,7 @@ Set the minimum acceptable log severity to display.
 
 * `CRITICAL` will only display critical messages.
 * `ERROR` will only display error and critical messages.
-* `WARN` will display error, warning, and critical messages.
+* `WARNING` will display error, warning, and critical messages.
 * `INFO` will display informational, error, warning, and critical messages.
 * `DEBUG` will display debug messages, in addition to all of the above.
 
@@ -519,6 +565,8 @@ This should be a path to a log file, or left empty.
 -----------
 logfile:
 -----------
+
+include::inc_filepath.asciidoc[]
 
 The default value is empty, which will result in logging to `STDOUT`, or the
 console.
