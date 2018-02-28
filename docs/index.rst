@@ -16,8 +16,8 @@ snapshots.
 Compatibility
 -------------
 
-The Elasticsearch Curator Python API is compatible with Elasticsearch versions 2.x
-through 5.0, and supports Python versions 2.6 and later.
+The Elasticsearch Curator Python API is compatible with the 5.x Elasticsearch versions, 
+and supports Python versions 2.7 and later.
 
 Example Usage
 -------------
@@ -58,7 +58,7 @@ logger logs requests to the server in JSON format as pretty-printed ``curl``
 commands that you can execute from the command line. The ``elasticsearch.trace``
 logger is not inherited from the base logger and must be activated separately.
 
-.. _logging library: http://docs.python.org/3.5/library/logging.html
+.. _logging library: http://docs.python.org/3.6/library/logging.html
 
 Contents
 --------
@@ -76,7 +76,7 @@ Contents
 License
 -------
 
-Copyright (c) 2012–2016 Elasticsearch <http://www.elastic.co>
+Copyright (c) 2012–2017 Elasticsearch <http://www.elastic.co>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

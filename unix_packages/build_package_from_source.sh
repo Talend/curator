@@ -3,9 +3,8 @@
 BASEPATH=$(pwd)
 PKG_TARGET=/curator_packages
 WORKDIR=/tmp/curator
-CX_VER="5.0"
-CX_FILE="/curator_source/unix_packages/cx_freeze-${CX_VER}.dev.tar.gz"
-CX_PATH="anthony_tuininga-cx_freeze-71554144c9cc"
+PYVER=3.6
+MINOR=3
 INPUT_TYPE=python
 CATEGORY=python
 VENDOR=Elastic
@@ -25,6 +24,28 @@ for file in ${C_POST_INSTALL} ${C_PRE_REMOVE} ${C_POST_REMOVE}; do
   echo >> ${file}
   chmod +x ${file}
 done
+
+remove_python() {
+  sudo rm -f /usr/local/lib/libpython${1}m.a
+  sudo rm -f /usr/local/lib/pkgconfig/python-${1}.pc
+  sudo rm -rf /usr/local/lib/python${1}
+  sudo rm -f /usr/lib/libpython${1}.a
+  sudo rm -rf /usr/local/include/python${1}m
+  cd /usr/local/bin
+  sudo rm -f 2to3-${1} easy_install-${1} idle${1} pip${1} pydoc${1} python${1} python${1}m python${1}m-config pyvenv-${1}
+  cd -
+}
+
+build_python() {
+  cd /tmp
+  wget -c https://www.python.org/ftp/python/${1}/Python-${1}.tgz
+  tar zxf Python-${1}.tgz
+  cd Python-${1}
+  ./configure --prefix=/usr/local
+  sudo make altinstall
+  sudo ln -s /usr/local/lib/libpython${1}m.a /usr/lib/libpython${1}.a
+  cd -
+}
 
 echo "ln -s /opt/elasticsearch-curator/curator /usr/bin/curator" >> ${C_POST_INSTALL}
 echo "ln -s /opt/elasticsearch-curator/curator_cli /usr/bin/curator_cli" >> ${C_POST_INSTALL}
@@ -54,7 +75,7 @@ if [ "${1}x" == "x" ]; then
   echo "Must provide version number (can be arbitrary)"
   exit 1
 else
-  cd ..
+  cd $(dirname $0)/..
   SOURCE_DIR=$(pwd)
 fi
 
@@ -62,7 +83,13 @@ case "$ID" in
   ubuntu|debian)
   	PKGTYPE=deb
   	PLATFORM=debian
-    PACKAGEDIR="${PKG_TARGET}/${1}/${PLATFORM}"
+    case "$VERSION_ID" in
+      1404|1604|8) PACKAGEDIR="${PKG_TARGET}/${1}/${PLATFORM}";;
+      9)           PACKAGEDIR="${PKG_TARGET}/${1}/${PLATFORM}${VERSION_ID}";;
+      *)           PACKAGEDIR="${PKG_TARGET}/${1}/${PLATFORM}";;
+    esac
+    sudo apt update -y
+    sudo apt install -y openssl zlib1g zlib1g-dev libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev dirmngr curl
 	;;
   centos|rhel)
   	PKGTYPE=rpm
@@ -71,6 +98,7 @@ case "$ID" in
 	  6|7)
       sudo rm -f /etc/yum.repos.d/puppetlabs-pc1.repo
       sudo yum -y update
+      sudo yum install -y openssl
 		;;
  	  *) echo "unknown system version: ${VERSION_ID}"; exit 1;;
 	esac
@@ -79,49 +107,40 @@ case "$ID" in
   *) echo "unknown system type: ${ID}"; exit 1;;
 esac
 
-HAS_PY3=$(which python3.5)
+HAS_PY3=$(which python${PYVER})
 if [ "${HAS_PY3}x" == "x" ]; then
-  cd /tmp
-  wget https://www.python.org/ftp/python/3.5.2/Python-3.5.2.tgz
-  tar zxf Python-3.5.2.tgz
-  cd Python-3.5.2
-  ./configure --prefix=/usr/local
-  sudo make altinstall
-  cd /usr/lib
-  sudo ln -s /usr/local/lib/libpython3.5m.a libpython3.5.a
-  cd ${WORKDIR}
+  build_python ${PYVER}.${MINOR}
 fi
 
-PYVER=3.5
-PIPBIN=/usr/local/bin/pip3.5
-PYBIN=/usr/local/bin/python3.5
-
-if [ "${CX_VER}" != "$(${PIPBIN} list | grep cx | awk '{print $2}' | tr -d '()')" ]; then
-  cd ${WORKDIR}
-  rm -rf ${CX_PATH}
-  tar zxf ${CX_FILE}
-  cd ${CX_PATH}
-  ${PIPBIN} install -U --user .
-  cd ${WORKDIR}
+FOUNDVER=$(python${PYVER} --version | awk '{print $2}')
+if [ "${FOUNDVER}" != "${PYVER}.${MINOR}" ]; then
+  remove_python $(echo ${FOUNDVER} | awk -F\. '{print $1"."$2}')
+  build_python ${PYVER}.${MINOR}
 fi
 
-if [ -e "/home/vagrant/.rvm/scripts/rvm" ]; then
-  source /home/vagrant/.rvm/scripts/rvm
+PIPBIN=/usr/local/bin/pip${PYVER}
+PYBIN=/usr/local/bin/python${PYVER}
+
+if [ -e "${HOME}/.rvm/scripts/rvm" ]; then
+  source ${HOME}/.rvm/scripts/rvm
 fi
 HAS_FPM=$(which fpm)
 if [ "${HAS_FPM}x" == "x" ]; then
   gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
   curl -sSL https://get.rvm.io | bash -s stable
-  source /home/vagrant/.rvm/scripts/rvm
+  source ${HOME}/.rvm/scripts/rvm
   rvm install ruby
   gem install fpm
 fi
 
+${PIPBIN} install -U --user setuptools
+${PIPBIN} install -U --user requests_aws4auth
+${PIPBIN} install -U --user boto3
+${PIPBIN} install -U --user cx_freeze
+
 cd $SOURCE_DIR
 
 mkdir -p ${PACKAGEDIR}
-${PIPBIN} install -U --user setuptools
-${PIPBIN} install -U --user requests_aws4auth
 ${PIPBIN} install -U --user -r requirements.txt
 ${PYBIN} setup.py build_exe
 sudo mv build/exe.linux-x86_64-${PYVER} /opt/elasticsearch-curator

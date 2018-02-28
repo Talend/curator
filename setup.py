@@ -22,11 +22,11 @@ def get_version():
     return VERSION
 
 def get_install_requires():
-    res = ['elasticsearch>=5.0.0,<6.0.0' ]
-    res.append('click>=6.0')
+    res = ['elasticsearch>=5.4.0,<6.0.0' ]
+    res.append('click>=6.7')
     res.append('pyyaml>=3.10')
     res.append('voluptuous>=0.9.3')
-    res.append('certifi>=2017.1.23')
+    res.append('certifi>=2017.4.17')
     return res
 
 try:
@@ -39,13 +39,10 @@ try:
         cert_file = ''
     # Dependencies are automatically detected, but it might need
     # fine tuning.
-    buildOptions = dict(
-        packages = [],
-        excludes = [],
-        include_files = [cert_file],
-    )
+
 
     base = 'Console'
+    msvcrt = ''
 
     icon = None
     if os.path.exists('Elastic.ico'):
@@ -86,6 +83,14 @@ try:
             targetName = "es_repo_mgr.exe",
             icon = icon
         )
+        msvcrt = 'vcruntime140.dll'
+
+    buildOptions = dict(
+        packages = [],
+        excludes = [],
+        include_files = [cert_file, msvcrt],
+        include_msvcr = True, 
+    )
     setup(
         name = "elasticsearch-curator",
         version = get_version(),
@@ -116,6 +121,7 @@ try:
             "Programming Language :: Python :: 2.7",
             "Programming Language :: Python :: 3.4",
             "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
         ],
         test_suite = "test.run_tests.run_all",
         tests_require = ["mock", "nose", "coverage", "nosexcover"],
@@ -154,6 +160,7 @@ except ImportError:
             "Programming Language :: Python :: 2.7",
             "Programming Language :: Python :: 3.4",
             "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
         ],
         test_suite = "test.run_tests.run_all",
         tests_require = ["mock", "nose", "coverage", "nosexcover"]

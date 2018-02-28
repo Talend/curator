@@ -22,10 +22,14 @@ CLASS_MAP = {
     'delete_indices' : DeleteIndices,
     'delete_snapshots' : DeleteSnapshots,
     'forcemerge' : ForceMerge,
+    'index_settings' : IndexSettings,
     'open' : Open,
+    'reindex' : Reindex,
     'replicas' : Replicas,
     'restore' : Restore,
+    'rollover' : Rollover,
     'snapshot' : Snapshot,
+    'shrink' : Shrink,
 }
 
 def process_action(client, config, **kwargs):
@@ -52,11 +56,7 @@ def process_action(client, config, **kwargs):
     if action == 'delete_indices':
         mykwargs['master_timeout'] = (
             kwargs['master_timeout'] if 'master_timeout' in kwargs else 30)
-    if action == 'allocation' or action == 'replicas':
-        # Setting the operation timeout to the client timeout
-        mykwargs['timeout'] = (
-            kwargs['timeout'] if 'timeout' in kwargs else 30)
-
+ 
     ### Update the defaults with whatever came with opts, minus any Nones
     mykwargs.update(prune_nones(opts))
     logger.debug('Action kwargs: {0}'.format(mykwargs))
@@ -78,7 +78,7 @@ def process_action(client, config, **kwargs):
             removes.iterate_filters(config['remove'])
             action_obj.remove(
                 removes, warn_if_no_indices= opts['warn_if_no_indices'])
-    elif action in [ 'cluster_routing', 'create_index' ]:
+    elif action in [ 'cluster_routing', 'create_index', 'rollover']:
         action_obj = action_class(client, **mykwargs)
     elif action == 'delete_snapshots' or action == 'restore':
         logger.debug('Running "{0}"'.format(action))
@@ -99,19 +99,9 @@ def process_action(client, config, **kwargs):
         logger.debug('Doing the action here.')
         action_obj.do_action()
 
-@click.command()
-@click.option('--config',
-    help="Path to configuration file. Default: ~/.curator/curator.yml",
-    type=click.Path(exists=True), default=settings.config_file()
-)
-@click.option('--dry-run', is_flag=True, help='Do not perform any changes.')
-@click.argument('action_file', type=click.Path(exists=True), nargs=1)
-@click.version_option(version=__version__)
-def cli(config, dry_run, action_file):
+def run(config, action_file, dry_run=False):
     """
-    Curator for Elasticsearch indices.
-
-    See http://elastic.co/guide/en/elasticsearch/client/curator/current
+    Actually run.
     """
     client_args = process_config(config)
     logger = logging.getLogger(__name__)
@@ -123,7 +113,9 @@ def cli(config, dry_run, action_file):
     #########################################
     ### Start working on the actions here ###
     #########################################
+    logger.debug('action_file: {0}'.format(action_file))
     action_config = get_yaml(action_file)
+    logger.debug('action_config: {0}'.format(action_config))
     action_dict = validate_actions(action_config)
     actions = action_dict['actions']
     logger.debug('Full list of actions: {0}'.format(actions))
@@ -151,7 +143,7 @@ def cli(config, dry_run, action_file):
         else:
             logger.info('Preparing Action ID: {0}, "{1}"'.format(idx, action))
         # Override the timeout, if specified, otherwise use the default.
-        if type(timeout_override) == type(int()):
+        if isinstance(timeout_override, int):
             client_args['timeout'] = timeout_override
         else:
             client_args['timeout'] = default_timeout
@@ -161,7 +153,6 @@ def cli(config, dry_run, action_file):
         kwargs['master_timeout'] = (
             client_args['timeout'] if client_args['timeout'] <= 300 else 300)
         kwargs['dry_run'] = dry_run
-        kwargs['timeout'] = client_args['timeout']
 
         # Create a client object for each action...
         client = get_client(**client_args)
@@ -175,8 +166,7 @@ def cli(config, dry_run, action_file):
             )
             process_action(client, actions[idx], **kwargs)
         except Exception as e:
-            if str(type(e)) == "<class 'curator.exceptions.NoIndices'>" or \
-                str(type(e)) == "<class 'curator.exceptions.NoSnapshots'>":
+            if isinstance(e, NoIndices) or isinstance(e, NoSnapshots):
                 if ignore_empty_list:
                     logger.info(
                         'Skipping action "{0}" due to empty list: '
@@ -203,3 +193,19 @@ def cli(config, dry_run, action_file):
                     sys.exit(1)
         logger.info('Action ID: {0}, "{1}" completed.'.format(idx, action))
     logger.info('Job completed.')
+
+@click.command()
+@click.option('--config',
+    help="Path to configuration file. Default: ~/.curator/curator.yml",
+    type=click.Path(exists=True), default=settings.config_file()
+)
+@click.option('--dry-run', is_flag=True, help='Do not perform any changes.')
+@click.argument('action_file', type=click.Path(exists=True), nargs=1)
+@click.version_option(version=__version__)
+def cli(config, dry_run, action_file):
+    """
+    Curator for Elasticsearch indices.
+
+    See http://elastic.co/guide/en/elasticsearch/client/curator/current
+    """
+    run(config, action_file, dry_run)
